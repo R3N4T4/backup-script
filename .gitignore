@@ -1,0 +1,7 @@
+/Users
+/venv
+cleardirs.py
+/*.txt
+/*.json
+.idea
+.DS_Store
