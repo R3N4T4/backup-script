@@ -5,7 +5,7 @@
 Rena Puchbauer, 09/2018
 
 Purpose of script:
-As soon as a file gets saved on the Desktop,the file should be renamed to the current date+original filename,
+As soon as a file is saved on the Desktop,the file should be renamed to the current date+original filename,
 so foo.pdf should would be renamed to 2018-08-24-03:46:12_foo.pdf and then moved to a local backup folder. After the
 file was moved to the Backup folder, it will be uploaded to Google drive and upon completion, deleted from the Desktop.
 """
@@ -27,7 +27,7 @@ def send_slack_notification(message):
     """
     gets called whenever an error (failed backup) occurs:
     Incoming Webhooks:
-    add webhook URL as system variable: export SLACK_WEBHOOK_URL='your webhook url'
+    add webhook URL as environment variable: export SLACK_WEBHOOK_URL='your webhook url'
     """
     webhook_url = os.environ.get('SLACK_WEBHOOK_URL')
     print("webhook URL:", webhook_url)
@@ -68,7 +68,7 @@ def newfiles_check(source_dir, backup_dir, logifempty=True):
                 new_backup_dir = os.path.join(backup_dir, fname)
                 os.makedirs(new_backup_dir)
                 newfiles_check(newdir, new_backup_dir, False)
-
+        print("format_filename call with: {} \n {} \n {}".format(source_dir,backup_dir,source_files))
         format_filename(source_dir, backup_dir, source_files)
 
 
@@ -88,7 +88,6 @@ def format_filename(dir, backup_dir, filenames_list):
             os.rename(os.path.join(dir, filename), os.path.join(dir, unique_name))
         else:
             os.rename(os.path.join(dir, filename), os.path.join(dir, newfilename))
-
     local_backup(dir, os.listdir(dir), backup_dir)
 
 
@@ -134,8 +133,7 @@ def local_backup(source_dir, source_files, backup_dir):
             pass
 
     for files in os.listdir(backup_dir):
-        print("fileeee", files)
-        if os.path.isfile(files):
+        if os.path.isfile(os.path.join(backup_dir, files)):
             new_backup_list.append(files)
         else:
             pass
@@ -158,15 +156,16 @@ def gdrive_upload(backup_files, backup_dir):
     """
     print("gdrive called")
     # Setup the Drive v3 API
-    SCOPES = 'https://www.googleapis.com/auth/drive'
-    store = file.Storage('token.json')
-    creds = store.get()
-    if not creds or creds.invalid:
-        flow = client.flow_from_clientsecrets('credentials.json', SCOPES)
-        creds = tools.run_flow(flow, store)
-        service = build('drive', 'v3', http=creds.authorize(Http()))
-    print("backup_files: {}".format(backup_files))
     try:
+        SCOPES = 'https://www.googleapis.com/auth/drive'
+        store = file.Storage('token.json')
+        creds = store.get()
+        if not creds or creds.invalid:
+            flow = client.flow_from_clientsecrets('credentials.json', SCOPES)
+            creds = tools.run_flow(flow, store)
+        service = build('drive', 'v3', http=creds.authorize(Http()))
+
+
         for backup in backup_files:
             print("file to backup",backup)
             file_metadata = {'name': backup}
